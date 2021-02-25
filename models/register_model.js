@@ -2,19 +2,24 @@ const mongoose = require('mongoose'); //third party
 
 const Register = mongoose.model('Register',{
     FullName: {
-        type:String
+        type:String,
+        required : true
     },
     Address: {
-        type: String
+        type: String,
+        required: true
     },
     PhoneNo:{
-        type : String
+        type : String,
+        required: true
     },
-    Email:{
-        type : String
+    Username:{
+        type : String,
+        required: true
     },
     Password:{
-        type : String
+        type : String,
+        required:true
     }
 })
 module.exports = Register;

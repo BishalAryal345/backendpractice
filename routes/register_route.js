@@ -1,51 +1,105 @@
-const express= require('express');
+const express = require('express');
+const { check, validationResult } = require('express-validator');
+const bcryptjs = require('bcryptjs');
 const Register = require('../models/register_model');
+const jwt = require('jsonwebtoken');
 const router = express.Router();
+const auth = require('../Middleware/Authenticate')
 
-router.post('/register_insert',function(req,res){
-    const FullName = req.body.FullName;
-    const Address = req.body.Address;
-    const PhoneNo = req.body.PhoneNo;
-    const Email = req.body.Email;
-    const Password = req.body.Password;
-    // console.log(us);
-    // console.log(add);
-   
-   
-    const data = new Register({
-        FullName: FullName,
-        Address: Address,
-        PhoneNo: PhoneNo,
-        Email :  Email,
-        Password: Password
-    });
-    data.save();
-    })
-    
-    router.get('/register_show', function(req,res){
-        // console.log("this is for showing data")
-        // res.send("test show")
-        Register.find().then(function(data){
+router.post('/register_insert',  function (req, res) {
+    console.log(req.body)
+    const errors = validationResult(req);
+
+    // res.send(errors.array());
+    if (errors.isEmpty) {
+        //valid
+        const FullName = req.body.FullName;
+        const Address = req.body.Address;
+        const PhoneNo = req.body.PhoneNo;
+        const Username = req.body.Username;
+        const Password = req.body.Password;
+        // console.log(us);
+        // console.log(add); 
+        bcryptjs.hash(Password, 10, function (err, hash) {
+            const data = new Register({
+                FullName: FullName,
+                Address: Address,
+                PhoneNo: PhoneNo,
+                Username: Username,
+                Password: hash
+            });
+            data.save()
+                .then(function (result) {
+                    res.status(201).json({ message: "Registration success !!!!" })
+                })// sucessess vayo ki vaena
+                .catch(function (err45) {
+                    res.status(500).json({ error: err45 })
+                })// error aayo ki aayena
+        })
+
+    }
+    else {
+        //invalid
+        res.status(400).json(errors.array());
+    }
+})
+
+//Login System .........................
+router.post('/user/login', function (req, res) {
+    const Username1 = req.body.Username;
+    const Password1 = req.body.Password;
+    console.log(Username1, Password1)
+    Register.findOne({ Username: Username1 })
+        .then(function (userData1) {
+            //if username doesnot exist
+            if (userData1 === null) {
+                return res.status(401).json({ error: "Invalid Credentials !! " })
+            }
+            // if username exists
+            bcryptjs.compare(Password1, userData1.Password, function (err, result) {
+                if (result === false) {
+                    //password worng
+                    return res.status(401).json({ error: "Invalid Credentials !!" })
+                }
+                //then generate token - ticket
+                const token = jwt.sign({ UserId: userData1._id }, 'anysecrectkey')
+                // res.send(token)
+                return res.status(200).json({
+                    message: "Success !!",
+                    token: token
+                })
+            })
+        })
+        .catch(function (e) {
+            res.status(500).json({ message: e })
+        })
+})
+
+
+router.get('/register_show', function (req, res) {
+    // console.log("this is for showing data")
+    // res.send("test show")
+    Register.find().then(function (data) {
         // console.log(data);
-            res.send(data);
+        res.send(data);
     })
 })
 
 // for delete
-router.delete('/register_delete/:id', function(req,res){
+router.delete('/register_delete/:id', auth.verifyUser, function (req, res) {
     //delete code
     const id = req.params.id;
-    Register.deleteOne({_id : id}).then(function(){
+    Register.deleteOne({ _id: id }).then(function () {
         res.send("Deleted !")
     })
-    
+
+})
+// for update
+router.put('/register_update/:id', function (req, res) {
+    const id = req.params.id;
+    const book_name = req.body.book_name;
+    Book.updateOne({ _id: id }, { Email: Email }).then(function () {
+        res.send("Updated!")
     })
-    // for update
-    router.put('/register_update/:id', function(req,res){
-        const id = req.params.id;
-        const book_name = req.body.book_name;
-        Book.updateOne({_id : id},{Email : Email}).then(function(){
-            res.send("Updated!")
-        })
-    })
+})
 module.exports = router;
